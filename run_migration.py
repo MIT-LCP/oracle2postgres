@@ -74,6 +74,11 @@ if debug == "y":
     debug = True
 else:
     debug = False
+logged = input('- Enable logging, y or n (default "y"): ') or "y"
+if logged == "y":
+    logged = True
+else:
+    logged = False
 
 # create a new database on the target
 # WARNING: deletes target database before creation!
@@ -155,6 +160,6 @@ for source_schema in schema_list:
 
     # iterate the tables, loading the data
     for t in source_metadata.sorted_tables:
-        migrate.copy_data(source_engine,source_schema,target_engine,t,chunksize,debug)
+        migrate.copy_data(source_engine,source_schema,target_engine,t,chunksize,logged,debug)
 
 print('Migration complete!\n')

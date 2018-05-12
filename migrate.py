@@ -60,7 +60,7 @@ def insert_data(target_engine,source_schema,table,data):
             connection.execute("SET session_replication_role = DEFAULT;")
 
 def copy_data(source_engine,source_schema,target_engine,table,
-    chunksize=10000,debug=False):
+    chunksize=10000,logged=True,debug=False):
     """
     Copies the data into the target system. Disables integrity checks 
     prior to inserting.
@@ -68,6 +68,10 @@ def copy_data(source_engine,source_schema,target_engine,table,
     # print schema
     if debug:
         print(source_schema)
+
+    # switch off logging
+    if not logged:
+        source_engine.execute('ALTER TABLE "{}" SET UNLOGGED'.format(table.name))
 
     # get the initial data chunk
     offset = 0
@@ -99,6 +103,10 @@ def copy_data(source_engine,source_schema,target_engine,table,
             #break after a couple of loops
             if offset > 200:
                 break
+
+    # switch on logging
+    if not logged:
+        source_engine.execute('ALTER TABLE "{}" SET LOGGED'.format(table.name))
 
 def convert_type(colname, ora_type):
     """
