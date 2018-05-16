@@ -77,7 +77,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
     offset = 0
     query =  """SELECT * 
                 FROM {}.{} 
-                ORDER BY rowid 
+                ORDER BY rownum 
                 OFFSET {} ROWS 
                 FETCH NEXT {} ROWS ONLY""".format(source_schema,table.name,offset,chunksize)
     data = source_engine.execute(query).fetchall()
@@ -90,7 +90,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
         offset = offset + chunksize
         query =  """SELECT * 
                     FROM {}.{} 
-                    ORDER BY rowid 
+                    ORDER BY rownum 
                     OFFSET {} ROWS 
                     FETCH NEXT {} ROWS ONLY""".format(source_schema,table.name,offset,chunksize)
         
