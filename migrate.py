@@ -71,7 +71,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
 
     # switch off logging
     if not logged:
-        source_engine.execute('ALTER TABLE "{}" SET UNLOGGED'.format(table.name))
+        target_engine.execute('ALTER TABLE "{}" SET UNLOGGED'.format(table.name))
 
     # get the initial data chunk
     offset = 0
@@ -95,7 +95,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
                     FETCH NEXT {} ROWS ONLY""".format(source_schema,table.name,offset,chunksize)
         
         # load the next chunk of data
-        data = source_engine.execute(query).fetchall()
+        data = target_engine.execute(query).fetchall()
 
         # print summary
         if debug:
