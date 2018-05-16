@@ -73,7 +73,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
     if not logged:
         target_engine.execute('ALTER TABLE "{}" SET UNLOGGED'.format(table.name))
 
-    columns = ', '.join(t.columns.keys())
+    columns = ', '.join(table.columns.keys())
 
     # get the initial data chunk
     offset = 0
