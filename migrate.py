@@ -73,13 +73,15 @@ def copy_data(source_engine,source_schema,target_engine,table,
     if not logged:
         target_engine.execute('ALTER TABLE "{}" SET UNLOGGED'.format(table.name))
 
+    columns = ', '.join(t.columns.keys())
+
     # get the initial data chunk
     offset = 0
-    query =  """SELECT * 
+    query =  """SELECT {} 
                 FROM {}.{} 
                 ORDER BY rowid 
                 OFFSET {} ROWS 
-                FETCH NEXT {} ROWS ONLY""".format(source_schema,table.name,offset,chunksize)
+                FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,table.name,offset,chunksize)
     data = source_engine.execute(query).fetchall()
 
     while data:
@@ -88,11 +90,11 @@ def copy_data(source_engine,source_schema,target_engine,table,
 
         # update the offset
         offset = offset + chunksize
-        query =  """SELECT * 
+        query =  """SELECT {} 
                     FROM {}.{} 
                     ORDER BY rowid 
                     OFFSET {} ROWS 
-                    FETCH NEXT {} ROWS ONLY""".format(source_schema,table.name,offset,chunksize)
+                    FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,table.name,offset,chunksize)
         
         # load the next chunk of data
         data = target_engine.execute(query).fetchall()
