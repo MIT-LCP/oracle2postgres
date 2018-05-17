@@ -60,6 +60,20 @@ def insert_data(target_engine,source_schema,table,data):
             # enable integrity checks
             connection.execute("SET session_replication_role = DEFAULT;")
 
+def get_column_string(table):
+    """
+    Creates a string of column names for including in a query.
+    """
+    column_list = table.columns.keys()
+
+    # quote columns that are also keywords. assume they are upper case!
+    keywords = ['order','from','select']
+    column_list = ['"{}"'.format(x.upper()) if x.lower() in keywords else x for x in column_list] 
+    
+    column_str = ', '.join(column_list)
+    
+    return column_str
+
 def copy_data(source_engine,source_schema,target_engine,table,
     chunksize=10000,logged=True,debug=False):
     """
@@ -74,7 +88,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
     if not logged:
         target_engine.execute('ALTER TABLE "{}" SET UNLOGGED'.format(table.name))
 
-    columns = ', '.join(table.columns.keys())
+    columns = get_column_string(table)
 
     # get the initial data chunk
     offset = 0
@@ -134,8 +148,6 @@ def convert_type(colname, ora_type):
         pg_type = sqlalchemy.types.Numeric()
     elif isinstance(ora_type,sqlalchemy.types.DateTime):
         pg_type = TIMESTAMP()
-    # elif str(ora_type) == str(sqlalchemy.types.VARCHAR(1)):
-    #     pg_type = sqlalchemy.types.VARCHAR()
     elif isinstance(ora_type,sqlalchemy.types.Text):
         pg_type = sqlalchemy.types.Text()
     elif isinstance(ora_type,sqlalchemy.types.NVARCHAR):
