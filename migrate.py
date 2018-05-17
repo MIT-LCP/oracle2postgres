@@ -89,6 +89,13 @@ def copy_data(source_engine,source_schema,target_engine,table,
         # insert the data
         insert_data(target_engine,source_schema,table,data)
 
+        # print summary
+        if debug:
+            print('    Copied rows {}-{}'.format(offset,offset+chunksize))
+            # break after a couple of loops
+            if offset > 200:
+                break
+
         # update the offset
         offset = offset + chunksize
         query =  """SELECT {} 
@@ -104,13 +111,6 @@ def copy_data(source_engine,source_schema,target_engine,table,
             # break if end of table is reached
             data = None
             break
-
-        # print summary
-        if debug:
-            print('    Copied rows {}-{}'.format(offset,offset+chunksize))
-            # break after a couple of loops
-            if offset > 200:
-                break
 
     # switch on logging
     if not logged:
