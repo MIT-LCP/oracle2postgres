@@ -2,6 +2,7 @@
 import pandas as pd
 import sqlalchemy
 import cx_Oracle
+import pdb
 
 # Import postgres types
 from sqlalchemy.dialects.postgresql import \
@@ -67,7 +68,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
     """
     # print schema
     if debug:
-        print(source_schema)
+        print('Copying {}.{}'.format(source_schema,table.name))
 
     # switch off logging
     if not logged:
@@ -97,8 +98,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
                     FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,table.name,offset,chunksize)
         
         # load the next chunk of data
-        try: 
-            data = target_engine.execute(query).fetchall()
+        data = source_engine.execute(query).fetchall()
         except:
             # break if end of table is reached
             data = None
@@ -106,14 +106,14 @@ def copy_data(source_engine,source_schema,target_engine,table,
 
         # print summary
         if debug:
-            print('Copied table "{}" with offset({})'.format(table.name,offset))
-            #break after a couple of loops
+            print('    Copied rows {}-{}'.format(offset,offset+chunksize))
+            # break after a couple of loops
             if offset > 200:
                 break
 
     # switch on logging
     if not logged:
-        source_engine.execute('ALTER TABLE "{}" SET LOGGED'.format(table.name))
+        target_engine.execute('ALTER TABLE "{}" SET LOGGED'.format(table.name))
 
 def convert_type(colname, ora_type):
     """
