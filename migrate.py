@@ -98,7 +98,8 @@ def copy_data(source_engine,source_schema,target_engine,table,
                     FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,table.name,offset,chunksize)
         
         # load the next chunk of data
-        data = source_engine.execute(query).fetchall()
+        try: 
+            data = source_engine.execute(query).fetchall()
         except:
             # break if end of table is reached
             data = None
