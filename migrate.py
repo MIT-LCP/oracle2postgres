@@ -1,6 +1,7 @@
 # Import libraries
 import pandas as pd
 import sqlalchemy
+from sqlalchemy.orm import sessionmaker
 import cx_Oracle
 import pdb
 
@@ -46,19 +47,19 @@ def check_default(default):
     
     return new_default
 
-def insert_data(target_engine,source_schema,table,data):
+def insert_data(target_session,source_schema,table,data):
     """
     Inserts the data into the target system. Disables integrity checks 
     prior to inserting.
     """
     if data:
-        with target_engine.begin() as connection:
-            # disable integrity checks
-            connection.execute("SET session_replication_role = replica;")
-            # insert data
-            connection.execute(table.insert(),data)
-            # enable integrity checks
-            connection.execute("SET session_replication_role = DEFAULT;")
+        # disable integrity checks
+        target_session.execute("SET session_replication_role = replica;")
+        # insert data
+        target_session.execute(table.insert(),data)
+        # enable integrity checks
+        target_session.execute("SET session_replication_role = DEFAULT;")
+        target_session.commit()
 
 def get_column_string(table):
     """
@@ -75,18 +76,24 @@ def get_column_string(table):
     return column_str
 
 def copy_data(source_engine,source_schema,target_engine,table,
-    chunksize=10000,logged=True,debug=False):
+    chunksize=10000,logged=True,verbose=True,trialrun=False):
     """
     Copies the data into the target system. Disables integrity checks 
     prior to inserting.
     """
+    # Create sessions
+    SourceSession = sessionmaker(bind=source_engine)
+    source_session = SourceSession()
+    TargetSession = sessionmaker(bind=target_engine)
+    target_session = TargetSession()
+
     # print schema
-    if debug:
+    if verbose:
         print('Copying {}.{}'.format(source_schema,table.name))
 
     # switch off logging
     if not logged:
-        target_engine.execute('ALTER TABLE "{}" SET UNLOGGED'.format(table.name))
+        target_session.execute('ALTER TABLE "{}" SET UNLOGGED'.format(table.name))
 
     columns = get_column_string(table)
 
@@ -97,18 +104,19 @@ def copy_data(source_engine,source_schema,target_engine,table,
                 ORDER BY rowid 
                 OFFSET {} ROWS 
                 FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,table.name,offset,chunksize)
-    data = source_engine.execute(query).fetchall()
+    data = source_session.execute(query).fetchall()
 
     while data:
         # insert the data
-        insert_data(target_engine,source_schema,table,data)
+        insert_data(target_session,source_schema,table,data)
 
         # print summary
-        if debug:
+        if verbose:
             print('    Copied rows {}-{}'.format(offset,offset+chunksize))
-            # break after a couple of loops
-            if offset > 200:
-                break
+        
+        # break after a couple of loops
+        if trialrun and offset > 200:
+            break
 
         # update the offset
         offset = offset + chunksize
@@ -120,7 +128,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
         
         # load the next chunk of data
         try: 
-            data = source_engine.execute(query).fetchall()
+            data = source_session.execute(query).fetchall()
         except:
             # break if end of table is reached
             data = None
@@ -128,7 +136,11 @@ def copy_data(source_engine,source_schema,target_engine,table,
 
     # switch on logging
     if not logged:
-        target_engine.execute('ALTER TABLE "{}" SET LOGGED'.format(table.name))
+        target_session.execute('ALTER TABLE "{}" SET LOGGED'.format(table.name))
+
+    # close the sessions
+    source_session.close()
+    target_session.close()
 
 def convert_type(colname, ora_type):
     """
@@ -168,4 +180,3 @@ def convert_type(colname, ora_type):
         print("\t{}: {} converted to {}".format(colname,ora_type,pg_type))
 
     return pg_type
-

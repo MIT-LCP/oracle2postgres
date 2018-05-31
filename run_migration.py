@@ -68,12 +68,17 @@ print('\n--------------------------------------')
 print('Enter data migration settings:')
 print('-------------------------------------')
 
-chunksize = int(input('- Maximum number of rows per chunk (default 100000): ') or 100000)
-debug = input('- Run in debug mode, y or n (default "n"): ') or "n"
-if debug == "y":
-    debug = True
+chunksize = int(input('- Maximum number of rows per chunk (default 100000): ') or 300000)
+trialrun = input('- Run in trial mode (copy ~200 rows for each table), y or n (default "n"): ') or "n"
+if trialrun == "y":
+    trialrun = True
 else:
-    debug = False
+    trialrun = False
+verbose = input('- Print copy status to screen, y or n (default "n"): ') or "n"
+if verbose == "y":
+    verbose = True
+else:
+    verbose = False
 logged = input('- Enable logging, y or n (default "y"): ') or "y"
 if logged == "y":
     logged = True
@@ -160,6 +165,7 @@ for source_schema in schema_list:
 
     # iterate the tables, loading the data
     for t in source_metadata.sorted_tables:
-        migrate.copy_data(source_engine,source_schema,target_engine,t,chunksize,logged,debug)
+        migrate.copy_data(source_engine,source_schema,target_engine,t,chunksize,
+            logged,verbose,trialrun)
 
 print('Migration complete!\n')
