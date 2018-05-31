@@ -68,7 +68,7 @@ print('\n--------------------------------------')
 print('Enter data migration settings:')
 print('-------------------------------------')
 
-chunksize = int(input('- Maximum number of rows per chunk (default 100000): ') or 300000)
+chunksize = int(input('- Maximum number of rows per chunk (default 300000): ') or 300000)
 trialrun = input('- Run in trial mode (copy ~200 rows for each table), y or n (default "n"): ') or "n"
 if trialrun == "y":
     trialrun = True
@@ -100,7 +100,7 @@ target_engine = sqlalchemy.create_engine(target_con_string2, echo = print_log)
 # get list of all schema
 inspector = sqlalchemy.inspect(source_engine)
 schema_list = inspector.get_schema_names()
-print('List of schema on source database: {}\n'.format(schema_list))
+print('\nList of schema on source database: {}\n'.format(schema_list))
 
 # Omit the following schema from the migration
 omit= ['']
