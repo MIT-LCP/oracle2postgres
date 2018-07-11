@@ -74,11 +74,6 @@ if trialrun == "y":
     trialrun = True
 else:
     trialrun = False
-verbose = input('- Print copy status to screen, y or n (default "n"): ') or "n"
-if verbose == "y":
-    verbose = True
-else:
-    verbose = False
 logged = input('- Enable logging, y or n (default "y"): ') or "y"
 if logged == "y":
     logged = True
@@ -166,6 +161,6 @@ for source_schema in schema_list:
     # iterate the tables, loading the data
     for t in source_metadata.sorted_tables:
         migrate.copy_data(source_engine,source_schema,target_engine,t,chunksize,
-            logged,verbose,trialrun)
+            logged,verbose=True,trialrun)
 
 print('Migration complete!\n')

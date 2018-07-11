@@ -95,7 +95,8 @@ def copy_data(source_engine,source_schema,target_engine,table,
 
     # switch off logging
     if not logged:
-        target_session.execute('ALTER TABLE "{}" SET UNLOGGED'.format(table.name))
+        target_session.execute('ALTER TABLE "{}.{}" SET UNLOGGED'.format(source_schema,
+            table.name))
 
     columns = get_column_string(table)
 
@@ -105,7 +106,8 @@ def copy_data(source_engine,source_schema,target_engine,table,
                 FROM {}.{} 
                 ORDER BY rowid 
                 OFFSET {} ROWS 
-                FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,table.name,offset,chunksize)
+                FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,
+                    table.name,offset,chunksize)
     data = source_session.execute(query).fetchall()
 
     while data:
@@ -127,7 +129,8 @@ def copy_data(source_engine,source_schema,target_engine,table,
                     FROM {}.{} 
                     ORDER BY rowid 
                     OFFSET {} ROWS 
-                    FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,table.name,offset,chunksize)
+                    FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,
+                        table.name,offset,chunksize)
         
         # load the next chunk of data
         try: 
@@ -139,7 +142,8 @@ def copy_data(source_engine,source_schema,target_engine,table,
 
     # switch on logging
     if not logged:
-        target_session.execute('ALTER TABLE "{}" SET LOGGED'.format(table.name))
+        target_session.execute('ALTER TABLE "{}.{}" SET LOGGED'.format(source_schema,
+            table.name))
 
     # close the sessions
     source_session.close()
