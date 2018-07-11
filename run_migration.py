@@ -161,6 +161,6 @@ for source_schema in schema_list:
     # iterate the tables, loading the data
     for t in source_metadata.sorted_tables:
         migrate.copy_data(source_engine,source_schema,target_engine,t,chunksize,
-            logged,verbose=True,trialrun)
+            logged,trialrun=trialrun)
 
 print('Migration complete!\n')
