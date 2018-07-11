@@ -15,10 +15,11 @@ import migrate
 import psycopg2
 
 msg =  """
-        ----------------------------------------------------
-        Running this script will delete the target database!\n
-        Are you sure you wish to continue? (y/n)
-        ----------------------------------------------------
+        ----------------------------------------------------- \n
+        Running this script will delete the target database!  \n
+        And it will close connections on the target database. \n
+        Are you sure you wish to continue? (y/n)              \n
+        ----------------------------------------------------- \n
         \n"""
 if input(msg) != "y":
     exit()
@@ -74,11 +75,11 @@ if trialrun == "y":
     trialrun = True
 else:
     trialrun = False
-logged = input('- Enable logging, y or n (default "y"): ') or "y"
-if logged == "y":
-    logged = True
-else:
+disable_log = input('- Disable logging (requires Postgres 9.5 or later), y or n (default "n"): ') or "n"
+if disable_log == "y":
     logged = False
+else:
+    logged = True
 
 # create a new database on the target
 # WARNING: deletes target database before creation!

@@ -93,10 +93,14 @@ def copy_data(source_engine,source_schema,target_engine,table,
         print('Began copy of {}.{} at {}'.format(source_schema,table.name,
             datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S")))
 
+    target_session.execute("SET SEARCH_PATH TO {};".format(source_schema))
+
     # switch off logging
     if not logged:
-        target_session.execute('ALTER TABLE "{}.{}" SET UNLOGGED'.format(source_schema,
-            table.name))
+        try: 
+            target_session.execute('ALTER TABLE "{}" SET UNLOGGED'.format(table.name))
+        except:
+            print("Unable to disable logging")
 
     columns = get_column_string(table)
 
@@ -142,8 +146,10 @@ def copy_data(source_engine,source_schema,target_engine,table,
 
     # switch on logging
     if not logged:
-        target_session.execute('ALTER TABLE "{}.{}" SET LOGGED'.format(source_schema,
-            table.name))
+        try:
+            target_session.execute('ALTER TABLE "{}" SET LOGGED'.format(table.name))
+        except:
+            pass
 
     # close the sessions
     source_session.close()
