@@ -4,6 +4,7 @@ import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 import cx_Oracle
 import pdb
+from datetime import datetime
 
 # Import postgres types
 from sqlalchemy.dialects.postgresql import \
@@ -89,7 +90,8 @@ def copy_data(source_engine,source_schema,target_engine,table,
 
     # print schema
     if verbose:
-        print('Copying {}.{}'.format(source_schema,table.name))
+        print('Began copy of {}.{} at {}'.format(source_schema,table.name,
+            datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S")))
 
     # switch off logging
     if not logged:
@@ -112,7 +114,8 @@ def copy_data(source_engine,source_schema,target_engine,table,
 
         # print summary
         if verbose:
-            print('    Copied rows {}-{}'.format(offset,offset+chunksize))
+            print('\tCopied rows {}-{} at {}'.format(offset,offset+chunksize,
+                datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S")))
         
         # break after a couple of loops
         if trialrun and offset > 200:
