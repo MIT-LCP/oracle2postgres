@@ -96,10 +96,14 @@ def copy_data(source_engine,source_schema,target_engine,table,
     target_session.execute("SET SEARCH_PATH TO {};".format(source_schema))
 
     # switch off logging
+    logswitch = False
     if not logged:
         try: 
             target_session.execute('ALTER TABLE "{}" SET UNLOGGED'.format(table.name))
+            logswitch = True
         except:
+            target_session.rollback()
+            target_session.execute("SET SEARCH_PATH TO {};".format(source_schema))
             print("Unable to disable logging")
 
     columns = get_column_string(table)
@@ -145,11 +149,8 @@ def copy_data(source_engine,source_schema,target_engine,table,
             break
 
     # switch on logging
-    if not logged:
-        try:
-            target_session.execute('ALTER TABLE "{}" SET LOGGED'.format(table.name))
-        except:
-            pass
+    if logswitch:
+        target_session.execute('ALTER TABLE "{}" SET LOGGED'.format(table.name))
 
     # close the sessions
     source_session.close()
