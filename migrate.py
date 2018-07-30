@@ -69,7 +69,7 @@ def get_column_string(table):
     column_list = table.columns.keys()
 
     # quote columns that are also keywords. assume they are upper case!
-    keywords = ['where','from','select','comment']
+    keywords = ['where','from','select','comment','order']
     column_list = ['"{}"'.format(x.upper()) if x.lower() in keywords else x for x in column_list] 
     
     column_str = ', '.join(column_list)
