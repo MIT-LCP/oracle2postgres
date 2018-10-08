@@ -95,13 +95,18 @@ target_engine = sqlalchemy.create_engine(target_con_string2, echo = print_log)
 
 # get list of all schema
 inspector = sqlalchemy.inspect(source_engine)
-schema_list = inspector.get_schema_names()
-print('\nList of schema on source database: {}\n'.format(schema_list))
+source_schema_list = inspector.get_schema_names()
+print('\nList of schema on source database: {}\n'.format(source_schema_list))
+
+# define the list of schema to copy
+schema_list = ['']
+print('\nList of schema to copy: {}\n'.format(schema_list))
 
 # Omit the following schema from the migration
+# Use this to omit system tables if you are creating the source table list 
+# with inspector.get_schema_names()
 omit= ['']
-
-print('List of schema to be omitted from migration: {}\n'.format(omit))
+# print('List of schema to be omitted from migration: {}\n'.format(omit))
 
 # Recreate the sources tables on the target database
 print('Creating schema on target database...\n')
