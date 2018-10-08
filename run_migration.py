@@ -75,7 +75,7 @@ if trialrun == "y":
     trialrun = True
 else:
     trialrun = False
-disable_log = input('- Disable logging (requires Postgres 9.5 or later), y or n (default "n"): ') or "y"
+disable_log = input('- Disable logging (requires Postgres 9.5 or later), y or n (default "y"): ') or "y"
 if disable_log == "y":
     logged = False
 else:
