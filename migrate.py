@@ -94,7 +94,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
     # print schema
     msg = 'Began copy of {}.{} at {}'.format(source_schema,table.name,
         datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S"))
-    logging.warning(msg)
+    logging.info(msg)
 
     target_session.execute("SET SEARCH_PATH TO {};".format(source_schema))
 
@@ -108,7 +108,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
             target_session.rollback()
             target_session.execute("SET SEARCH_PATH TO {};".format(source_schema))
             msg = "Unable to disable logging for {}.{}".format(source_schema,table.name)
-            logging.warning(msg)
+            logging.info(msg)
 
     columns = get_column_string(table)
 
@@ -159,7 +159,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
     # record end
     msg = 'Finished copy of {}.{} at {}'.format(source_schema,table.name,
         datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S"))
-    logging.warning(msg)
+    logging.info(msg)
 
     # close the sessions
     source_session.close()
