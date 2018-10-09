@@ -13,73 +13,9 @@ import cx_Oracle
 import getpass
 import migrate
 import psycopg2
+import multiprocessing
 
-
-def get_source_details():
-    """
-    Get details of the source database (Oracle)
-    """
-    print('\n------------------------------------------')
-    print('Enter source database settings:')
-    print('------------------------------------------')
-    src_username = input('- Username on source database (default "sys"): ') or 'sys'
-    src_host = input('- Hostname for source database (default "localhost": ') or 'localhost'
-    src_port = input('- Port for source database (default "1521"): ') or 1521
-    src_database = input('- Name of source database (default "sys"): ') or 'sys'
-    src_password = getpass.getpass('- Password for source database: ')
-
-    print('\nUsername: {}'.format(src_username))
-    print('Hostname: {}'.format(src_host))
-    print('Port: {}'.format(src_port))
-    print('Database name: {}'.format(src_database))
-    print('Password: {}'.format('*'*len(src_password)))
-
-    return src_username,src_host,src_port,src_database,src_password
-
-def get_target_details():
-    """ 
-    Get details of the target database (Postgres)
-    """
-    print('\n------------------------------------------')
-    print('Enter target database settings:')
-    print('------------------------------------------')
-    target_username = input('- Username on target database (default "postgres"): ') or 'postgres'
-    target_host = input('- Hostname for target database (default "localhost"): ') or 'localhost'
-    target_port = input('- Port for target database (default "5432"): ') or 5432
-    target_database = input('- Name of target database (default "postgres"): ') or 'postgres'
-    target_password = getpass.getpass('- Password for target database: ')
-
-    print('\nUsername: {}'.format(target_username))
-    print('Hostname: {}'.format(target_host))
-    print('Port: {}'.format(target_port))
-    print('Database name: {}'.format(target_database))
-    print('Password: {}'.format('*'*len(target_password)))
-
-    return target_username,target_host,target_port,target_database,target_password
-
-
-def connect_to_source(src_username,src_host,src_port,src_database,src_password):
-    """
-    Connect to source database
-    """
-    dsn_str = cx_Oracle.makedsn(src_host,src_port,service_name=src_database)
-    src_con_string = 'oracle://{}:{}@'.format(src_username, src_password) + dsn_str
-    source_engine = sqlalchemy.create_engine(src_con_string)
-
-    return source_engine
-
-def connect_to_target(target_username,target_host,target_port,target_database,target_password):
-    """
-    Connect to target database
-    """
-    print_log = False
-    target_con_string = 'postgresql+psycopg2://{}:{}@{}:{}/{}'.format(target_username, 
-        target_password, target_host, target_port, target_database)
-    target_engine = sqlalchemy.create_engine(target_con_string, echo = print_log)
-
-    return target_engine
-
-def get_migration_settings():
+def get_migration_config():
     """
     Get migration settings
     """
@@ -87,24 +23,118 @@ def get_migration_settings():
     print('Enter data migration settings:')
     print('-------------------------------------')
 
-    target_database_new = str(input("- Name of target database (default 'oracle_migration'): ") or "oracle_migration")
-    chunksize = int(input("- Maximum number of rows per chunk (default '300000'): ") or 300000)
+    config = {}
 
+    # run in trial mode
     trialrun = input("- Run in trial mode (copy ~200 rows for each table), y or n (default 'n'): ") or "n"
-    if trialrun == "y":
-        trialrun = True
+    if trialrun.lower() == "y":
+        config['trialrun'] = True
     else:
-        trialrun = False
+        config['trialrun'] = False
 
+    # max size of migration chunk
+    config['chunksize'] = int(input("- Maximum number of rows per chunk (default '300000', '100' in trial mode): ") or 300000)
+    if config['trialrun']:
+        config['chunksize'] = min(config['chunksize'],100)
+
+    # disable logging for faster migration
     disable_log = input('- Disable logging (requires Postgres 9.5 or later), y or n (default "y"): ') or "y"
-    if disable_log == "y":
-        logged = False
+    if disable_log.lower() == "y":
+        config['logged'] = False
     else:
-        logged = True
+        config['logged'] = True
 
-    return chunksize,logged,trialrun,target_database_new
+    # run with multiprocessing
+    multiprocess = input("- Run multiple processes, y or n (default 'n'): ") or "n"
+    if multiprocess.lower() == "y":
+        config['multiprocess'] = True
+        processes = input("- Number of processes (leave empty to assign automatically): ") or None
+        if processes:
+            pool = multiprocessing.Pool(int(processes))
+        else: 
+            pool = multiprocessing.Pool()
+    else:
+        config['multiprocess'] = False
+        pool = None
 
-def get_list_of_schema():
+    return config, pool
+
+def get_source_config():
+    """
+    Get details of the source database (Oracle)
+    """
+    print('\n------------------------------------------')
+    print('Enter source database settings:')
+    print('------------------------------------------')
+
+    config = {}
+    config['username'] = input('- Username on source database (default "sys"): ') or 'sys'
+    config['host'] = input('- Hostname for source database (default "localhost": ') or 'localhost'
+    config['port'] = input('- Port for source database (default "1521"): ') or 1521
+    config['database'] = input('- Name of source database (default "sys"): ') or 'sys'
+    config['password'] = getpass.getpass('- Password for source database: ')
+
+    print('\nUsername: {}'.format(config['username']))
+    print('Hostname: {}'.format(config['host']))
+    print('Port: {}'.format(config['port']))
+    print('Database name: {}'.format(config['database']))
+    print('Password: {}'.format('*'*len(config['password'])))
+
+    return config
+
+def get_target_config():
+    """ 
+    Get details of the target database (Postgres)
+    """
+    print('\n------------------------------------------')
+    print('Enter target database settings:')
+    print('------------------------------------------')
+
+    config = {}
+    config['username'] = input('- Username on target database (default "postgres"): ') or 'postgres'
+    config['host'] = input('- Hostname for target database (default "localhost"): ') or 'localhost'
+    config['port'] = input('- Port for target database (default "5432"): ') or 5432
+    config['database'] = input("- Name of target database (default 'oracle_migration'): ") or "oracle_migration"
+    config['password'] = getpass.getpass('- Password for target database: ')
+
+    print('\nUsername: {}'.format(config['username']))
+    print('Hostname: {}'.format(config['host']))
+    print('Port: {}'.format(config['port']))
+    print('Database name: {}'.format(config['database']))
+    print('Password: {}'.format('*'*len(config['password'])))
+
+    return config
+
+def connect_to_source(config):
+    """
+    Connect to source database
+    """
+    print_log = False
+
+    dsn_str = cx_Oracle.makedsn(config['host'],config['port'],service_name=config['database'])
+    con_string = 'oracle://{}:{}@'.format(config['username'], config['password']) + dsn_str
+    engine = sqlalchemy.create_engine(con_string, echo = print_log)
+
+    return engine
+
+def connect_to_target(config,dbname=None):
+    """
+    Connect to target database
+    """
+    print_log = False
+
+    if dbname:
+        con_string = 'postgresql+psycopg2://{}:{}@{}:{}/{}'.format(config['username'], 
+            config['password'], config['host'], config['port'], dbname)
+    else:
+        con_string = 'postgresql+psycopg2://{}:{}@{}:{}'.format(config['username'], 
+            config['password'], config['host'], config['port'])
+
+    engine = sqlalchemy.create_engine(con_string, echo = print_log)
+
+    return engine
+
+def get_schema_list():
     """
     Get list of schema to migrate
     """
@@ -162,21 +192,22 @@ def create_target_schema(schema_list,source_engine,target_engine):
 
     print('Target schema created!\n')
 
-def migrate_data(schema_list,source_engine,target_engine,chunksize,logged,trialrun):
+def migrate_data(schema,source_config,target_config,migration_config):
     """
     Migrate the data from the source tables to the target tables
     """
-    print('Migrating data to target database...\n')
-    for source_schema in schema_list:
-        
-        # load the schema metadata profile
-        source_metadata = sqlalchemy.MetaData(source_engine)
-        source_metadata.reflect(schema=source_schema)
+    # create database connections
+    source_engine = connect_to_source(source_config)
+    target_engine = connect_to_target(target_config,target_config['database'])
+    
+    # load the schema metadata profile
+    source_metadata = sqlalchemy.MetaData(source_engine)
+    source_metadata.reflect(schema=schema)
 
-        # iterate the tables, loading the data
-        for t in source_metadata.sorted_tables:
-            migrate.copy_data(source_engine,source_schema,target_engine,t,chunksize,
-                logged,trialrun=trialrun)
+    # iterate the tables, loading the data
+    for t in source_metadata.sorted_tables:
+        migrate.copy_data(source_engine,schema,target_engine,t,migration_config['chunksize'],
+            migration_config['logged'],trialrun=migration_config['trialrun'])
 
 def main():
     """
@@ -189,34 +220,42 @@ def main():
             Are you sure you wish to continue? (y/n)              \n
             ----------------------------------------------------- \n
             \n"""
-    if input(msg) != "y":
+
+    if input(msg).lower() != "y":
         exit()
 
-    src_username,src_host,src_port,src_database,src_password = get_source_details()
-    source_engine = connect_to_source(src_username,src_host,src_port,src_database,
-        src_password)
+    # get migration settings
+    migration_config, pool = get_migration_config()
+    source_config = get_source_config()
+    target_config = get_target_config()
 
-    target_username,target_host,target_port,target_database,target_password = get_target_details()
-    target_engine = connect_to_target(target_username,target_host,target_port,
-        target_database,target_password)
-
-    chunksize,logged,trialrun,target_database_new = get_migration_settings()
+    # get the list of schema to copy
+    schema_list = get_schema_list()
 
     # create a new database on the target
     # WARNING: deletes target database before creation!
-    migrate.drop_connections(target_database_new,target_engine)
-    migrate.drop_database(target_database_new,target_engine)
-    migrate.create_database(target_database_new,target_engine)
+    target_engine = connect_to_target(target_config)
+    migrate.drop_connections(target_config['database'],target_engine)
+    migrate.drop_database(target_config['database'],target_engine)
+    migrate.create_database(target_config['database'],target_engine)
 
-    # reconnect to the target database
-    target_engine = connect_to_target(target_username,target_host,target_port,
-        target_database_new,target_password)
-
-    # define the list of schema to copy
-    schema_list = get_list_of_schema()
-
+    # create the schema on the target database
+    source_engine = connect_to_source(source_config)
+    target_engine = connect_to_target(target_config,target_config['database'])
     create_target_schema(schema_list,source_engine,target_engine)
-    migrate_data(schema_list,source_engine,target_engine,chunksize,logged,trialrun)
+
+    # migrate the data
+    print('Migrating data to target database...\n')
+
+    # set up multiprocessing
+    if migration_config['multiprocess']:
+        # starmap takes an iterable list
+        arg_iterable = [[schema,source_config,target_config,migration_config] for schema in schema_list]
+        pool.starmap(migrate_data,arg_iterable)
+    else:
+        for schema in schema_list:
+            migrate_data(schema,source_config,target_config,migration_config)
+
     print('Migration complete!\n')
 
 if __name__ == "__main__":

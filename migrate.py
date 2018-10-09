@@ -5,6 +5,9 @@ from sqlalchemy.orm import sessionmaker
 import cx_Oracle
 import pdb
 from datetime import datetime
+import logging
+
+logging.basicConfig(filename='migration.log')
 
 # Import postgres types
 from sqlalchemy.dialects.postgresql import \
@@ -40,10 +43,10 @@ def create_database(dbname,engine):
 
 def check_default(default):
     new_default = default
-    print("CHECKING DEFAULT")
+    logging.info("CHECKING DEFAULT")
 
     if str(default).lower() == "sysdate":
-        print("UPDATED")
+        logging.info("UPDATED")
         new_default = None
     
     return new_default
@@ -77,21 +80,21 @@ def get_column_string(table):
     return column_str
 
 def copy_data(source_engine,source_schema,target_engine,table,
-    chunksize=10000,logged=True,verbose=True,trialrun=False):
+    chunksize=10000,logged=True,trialrun=False):
     """
     Copies the data into the target system. Disables integrity checks 
     prior to inserting.
     """
-    # Create sessions
+    # create sessions
     SourceSession = sessionmaker(bind=source_engine)
     source_session = SourceSession()
     TargetSession = sessionmaker(bind=target_engine)
     target_session = TargetSession()
 
     # print schema
-    if verbose:
-        print('Began copy of {}.{} at {}'.format(source_schema,table.name,
-            datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S")))
+    msg = 'Began copy of {}.{} at {}'.format(source_schema,table.name,
+        datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S"))
+    logging.warning(msg)
 
     target_session.execute("SET SEARCH_PATH TO {};".format(source_schema))
 
@@ -104,7 +107,8 @@ def copy_data(source_engine,source_schema,target_engine,table,
         except:
             target_session.rollback()
             target_session.execute("SET SEARCH_PATH TO {};".format(source_schema))
-            print("Unable to disable logging")
+            msg = "Unable to disable logging for {}.{}".format(source_schema,table.name)
+            logging.warning(msg)
 
     columns = get_column_string(table)
 
@@ -123,9 +127,9 @@ def copy_data(source_engine,source_schema,target_engine,table,
         insert_data(target_session,source_schema,table,data)
 
         # print summary
-        if verbose:
-            print('\tCopied rows {}-{} at {}'.format(offset,offset+chunksize,
-                datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S")))
+        msg = '\tCopied rows {}-{} of {}.{} at {}'.format(offset,offset+chunksize,
+            source_schema,table.name, datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S"))
+        logging.info(msg)
         
         # break after a couple of loops
         if trialrun and offset > 200:
@@ -148,9 +152,14 @@ def copy_data(source_engine,source_schema,target_engine,table,
             data = None
             break
 
-    # switch on logging
+    # switch on database logging
     if logswitch:
         target_session.execute('ALTER TABLE "{}" SET LOGGED'.format(table.name))
+
+    # record end
+    msg = 'Finished copy of {}.{} at {}'.format(source_schema,table.name,
+        datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S"))
+    logging.warning(msg)
 
     # close the sessions
     source_session.close()
@@ -168,7 +177,7 @@ def convert_type(colname, ora_type):
     # Otherwise str(ora_type) clauses will error
     if isinstance(ora_type,sqlalchemy.types.NullType):
         pg_type = sqlalchemy.types.String()
-        print('\t{}: NULL DETECTED'.format(colname))
+        logging.info('\t{}: NULL DETECTED'.format(colname))
         return pg_type
     elif isinstance(ora_type,sqlalchemy.types.Numeric):
         pg_type = sqlalchemy.types.Numeric()
@@ -191,6 +200,7 @@ def convert_type(colname, ora_type):
         pass
 
     if pg_type != ora_type:
-        print("\t{}: {} converted to {}".format(colname,ora_type,pg_type))
+        msg = "\t{}: {} converted to {}".format(colname,ora_type,pg_type)
+        logging.info(msg)
 
     return pg_type
