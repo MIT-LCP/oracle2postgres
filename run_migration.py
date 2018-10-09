@@ -87,19 +87,22 @@ def get_migration_settings():
     print('Enter data migration settings:')
     print('-------------------------------------')
 
-    chunksize = int(input('- Maximum number of rows per chunk (default 300000): ') or 300000)
-    trialrun = input('- Run in trial mode (copy ~200 rows for each table), y or n (default "n"): ') or "n"
+    target_database_new = str(input("- Name of target database (default 'oracle_migration'): ") or "oracle_migration")
+    chunksize = int(input("- Maximum number of rows per chunk (default '300000'): ") or 300000)
+
+    trialrun = input("- Run in trial mode (copy ~200 rows for each table), y or n (default 'n'): ") or "n"
     if trialrun == "y":
         trialrun = True
     else:
         trialrun = False
+
     disable_log = input('- Disable logging (requires Postgres 9.5 or later), y or n (default "y"): ') or "y"
     if disable_log == "y":
         logged = False
     else:
         logged = True
 
-    return chunksize,logged,trialrun
+    return chunksize,logged,trialrun,target_database_new
 
 def get_list_of_schema():
     """
@@ -159,7 +162,7 @@ def create_target_schema(schema_list,source_engine,target_engine):
 
     print('Target schema created!\n')
 
-def copy_data(schema_list,source_engine,target_engine,chunksize,logged,trialrun):
+def migrate_data(schema_list,source_engine,target_engine,chunksize,logged,trialrun):
     """
     Migrate the data from the source tables to the target tables
     """
@@ -197,11 +200,10 @@ def main():
     target_engine = connect_to_target(target_username,target_host,target_port,
         target_database,target_password)
 
-    chunksize,logged,trialrun = get_migration_settings()
+    chunksize,logged,trialrun,target_database_new = get_migration_settings()
 
     # create a new database on the target
     # WARNING: deletes target database before creation!
-    target_database_new = 'oracle_migration'
     migrate.drop_connections(target_database_new,target_engine)
     migrate.drop_database(target_database_new,target_engine)
     migrate.create_database(target_database_new,target_engine)
@@ -214,7 +216,7 @@ def main():
     schema_list = get_list_of_schema()
 
     create_target_schema(schema_list,source_engine,target_engine)
-    copy_data(schema_list,source_engine,target_engine,chunksize,logged,trialrun)
+    migrate_data(schema_list,source_engine,target_engine,chunksize,logged,trialrun)
     print('Migration complete!\n')
 
 if __name__ == "__main__":
