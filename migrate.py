@@ -114,12 +114,21 @@ def copy_data(source_engine,source_schema,target_engine,table,
 
     # get the initial data chunk
     offset = 0
+    
+    # method 1, requires sort
+    # query =  """SELECT {} 
+    #             FROM {}.{} 
+    #             ORDER BY rowid 
+    #             OFFSET {} ROWS 
+    #             FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,
+    #                 table.name,offset,chunksize)
+    
+    # method 2
     query =  """SELECT {} 
                 FROM {}.{} 
-                ORDER BY rowid 
-                OFFSET {} ROWS 
-                FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,
-                    table.name,offset,chunksize)
+                WHERE rowid BETWEEN {} AND {}""".format(columns,source_schema,
+                    table.name,offset,offset+chunksize)
+    
     data = source_session.execute(query).fetchall()
 
     while data:
@@ -127,7 +136,7 @@ def copy_data(source_engine,source_schema,target_engine,table,
         insert_data(target_session,source_schema,table,data)
 
         # print summary
-        msg = '\tCopied rows {}-{} of {}.{} at {}'.format(offset,offset+chunksize,
+        msg = '\tCopied rows {}-{} of {}.{} at {}'.format(offset+1,offset+chunksize,
             source_schema,table.name, datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S"))
         logging.info(msg)
         
@@ -137,13 +146,21 @@ def copy_data(source_engine,source_schema,target_engine,table,
 
         # update the offset
         offset = offset + chunksize
+
+        # method 1, requires sort
+        # query =  """SELECT {} 
+        #             FROM {}.{}
+        #             ORDER BY rowid 
+        #             OFFSET {} ROWS 
+        #             FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,
+        #                 table.name,offset,chunksize)
+
+        # method 2
         query =  """SELECT {} 
-                    FROM {}.{} 
-                    ORDER BY rowid 
-                    OFFSET {} ROWS 
-                    FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,
-                        table.name,offset,chunksize)
-        
+                    FROM {}.{}
+                    WHERE rowid BETWEEN {} AND {}""".format(columns,source_schema,
+                        table.name,offset+1,offset+chunksize)
+
         # load the next chunk of data
         try: 
             data = source_session.execute(query).fetchall()
