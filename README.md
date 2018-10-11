@@ -10,5 +10,6 @@ For example usage, see the Jupyter Notebook at: [https://github.com/MIT-LCP/orac
 ## Instructions for use
 
 1. Clone the repository to your server: `git clone git@github.com:MIT-LCP/oracle-to-postgres.git`.
-2. Run the `run_migration.py` script with `python run_migration.py`.
-3. Follow the instructions to add details of the source and target databases.
+2. At the moment, you will need to manually update `schema_list = ['']` in `run_migration.py` with a list of schema to migrate.
+3. Run the `run_migration.py` script with `python run_migration.py`.
+4. Follow the instructions to add details of the source and target databases.
