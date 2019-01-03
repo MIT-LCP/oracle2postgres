@@ -362,7 +362,7 @@ def _check_default(default):
     
     return new_default
 
-def _insert_data(target_session,source_schema,table,data):
+def _insert_data(target_session,table,data):
     """
     Inserts the data into the target system. Disables integrity checks 
     prior to inserting.
@@ -427,10 +427,10 @@ def _copy_data(source_engine,source_schema,target_engine,table,
     # if trialrun:
     #     r = source_session.query(table).limit(200)
     #     data = r.all()
-    #     _insert_data(target_session,source_schema,table,data)
+    #     _insert_data(target_session,table,data)
     # else: 
     #     for data in source_session.query(table).yield_per(batchsize):
-    #         _insert_data(target_session,source_schema,table,data)
+    #         _insert_data(target_session,table,data)
 
     # get the initial data batch
     offset = 0
@@ -444,12 +444,12 @@ def _copy_data(source_engine,source_schema,target_engine,table,
 
     while data:
         # insert the data
-        _insert_data(target_session,source_schema,table,data)
+        _insert_data(target_session,table,data)
 
-        # print summary
-        msg = '\tCopied rows {}-{} of {}.{} at {}'.format(offset,offset+batchsize,
-            source_schema,table.name, datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S"))
-        logging.info(msg)
+        # # print summary
+        # msg = '\tCopied rows {}-{} of {}.{} at {}'.format(offset,offset+batchsize,
+        #     source_schema,table.name, datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S"))
+        # logging.info(msg)
         
         # break after a couple of loops
         if trialrun and offset > 200:
