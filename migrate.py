@@ -423,54 +423,54 @@ def _copy_data(source_engine,source_schema,target_engine,table,
 
     columns = _get_column_string(table)
 
-    # copy the data in batches
-    if trialrun:
-        r = source_session.query(table).limit(200)
-        data = r.all()
-        _insert_data(target_session,source_schema,table,data)
-    else: 
-        for data in source_session.query(table).yield_per(batchsize):
-            _insert_data(target_session,source_schema,table,data)
-
-    # # get the initial data batch
-    # offset = 0
-    # query =  """SELECT {} 
-    #             FROM {}.{} 
-    #             ORDER BY rowid 
-    #             OFFSET {} ROWS 
-    #             FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,
-    #                 table.name,offset,batchsize)
-    # data = source_session.execute(query).fetchall()
-
-    # while data:
-    #     # insert the data
+    # # copy the data in batches
+    # if trialrun:
+    #     r = source_session.query(table).limit(200)
+    #     data = r.all()
     #     _insert_data(target_session,source_schema,table,data)
+    # else: 
+    #     for data in source_session.query(table).yield_per(batchsize):
+    #         _insert_data(target_session,source_schema,table,data)
 
-    #     # print summary
-    #     msg = '\tCopied rows {}-{} of {}.{} at {}'.format(offset,offset+batchsize,
-    #         source_schema,table.name, datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S"))
-    #     logging.info(msg)
-        
-    #     # break after a couple of loops
-    #     if trialrun and offset > 200:
-    #         break
+    # get the initial data batch
+    offset = 0
+    query =  """SELECT {} 
+                FROM {}.{} 
+                ORDER BY rowid 
+                OFFSET {} ROWS 
+                FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,
+                    table.name,offset,batchsize)
+    data = source_session.execute(query).fetchall()
 
-    #     # update the offset
-    #     offset = offset + batchsize
-    #     query =  """SELECT {} 
-    #                 FROM {}.{} 
-    #                 ORDER BY rowid 
-    #                 OFFSET {} ROWS 
-    #                 FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,
-    #                     table.name,offset,batchsize)
+    while data:
+        # insert the data
+        _insert_data(target_session,source_schema,table,data)
+
+        # print summary
+        msg = '\tCopied rows {}-{} of {}.{} at {}'.format(offset,offset+batchsize,
+            source_schema,table.name, datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S"))
+        logging.info(msg)
         
-    #     # load the next chunk of data
-    #     try: 
-    #         data = source_session.execute(query).fetchall()
-    #     except:
-    #         # break if end of table is reached
-    #         data = None
-    #         break
+        # break after a couple of loops
+        if trialrun and offset > 200:
+            break
+
+        # update the offset
+        offset = offset + batchsize
+        query =  """SELECT {} 
+                    FROM {}.{} 
+                    ORDER BY rowid 
+                    OFFSET {} ROWS 
+                    FETCH NEXT {} ROWS ONLY""".format(columns,source_schema,
+                        table.name,offset,batchsize)
+        
+        # load the next chunk of data
+        try: 
+            data = source_session.execute(query).fetchall()
+        except:
+            # break if end of table is reached
+            data = None
+            break
 
     # switch on database logging
     if logswitch:
