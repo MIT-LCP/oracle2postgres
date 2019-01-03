@@ -11,7 +11,9 @@ import psycopg2
 import readline # support use of cursors in user input
 import getpass
 
-logging.basicConfig(filename='migration.log')
+# Create a log file (record info status and above)
+logfile = "{}_{}".format(datetime.now().strftime("%Y_%m_%d"),'migration.log')
+logging.basicConfig(filename=logfile,level=logging.INFO)
 
 # Import postgres types
 from sqlalchemy.dialects.postgresql import \
@@ -168,7 +170,7 @@ def check_for_nulls(engine,schema_list,remove=False):
                     null_list.append('{}.{}.{}'.format(source_schema,t.name,col.name))
                     if remove:
                         # remove them
-                        t.update().values({col:func.replace(col,chr(0),
+                        t.update().values({col:sqlalchemy.func.replace(col,chr(0),
                             '')}).where(col.like('%' + chr(0) + '%')).execute()
                         con.execute("COMMIT")
                         msg = "Null characters removed from {}.{}".format(t.name,col.name)
