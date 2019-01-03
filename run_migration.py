@@ -26,7 +26,7 @@ def main():
         sys.exit()
 
     # get settings for migration
-    migration_config, pool = migrate.get_migration_config()
+    migration_config = migrate.get_migration_config()
     source_config = migrate.get_source_config()
     target_config = migrate.get_target_config()
 
@@ -56,4 +56,3 @@ if __name__ == "__main__":
     Execute when run as script
     """
     main()
-

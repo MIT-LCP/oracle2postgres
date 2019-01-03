@@ -109,7 +109,7 @@ def get_migration_config():
         config['trialrun'] = False
 
     # max size of migration chunk
-    config['batchsize'] = int(input("- Number of rows per batch (default '300000', '100' in trial mode): ") or 300000)
+    config['batchsize'] = int(input("- Number of rows per batch (default '300000'): ") or 300000)
     if config['trialrun']:
         config['batchsize'] = min(config['batchsize'],100)
 
@@ -124,14 +124,10 @@ def get_migration_config():
     multiprocess = input("- Run multiple processes, y or n (default 'n'): ") or "n"
     if multiprocess.lower() == "y":
         config['multiprocess'] = True
-        processes = input("- Number of processes (leave empty to assign automatically): ") or None
-        if processes:
-            pool = multiprocessing.Pool(int(processes))
-        else: 
-            pool = multiprocessing.Pool()
+        config['processes'] = input("- Number of processes (leave empty to assign automatically): ") or None
     else:
         config['multiprocess'] = False
-        pool = None
+        config['processes'] = None
 
     msg = '''
     Trialrun: {}
@@ -144,7 +140,7 @@ def get_migration_config():
     print(msg)
     logging.info(msg)    
 
-    return config, pool
+    return config
 
 def check_for_nulls(engine,schema_list,remove=False):
     """
@@ -165,9 +161,10 @@ def check_for_nulls(engine,schema_list,remove=False):
             for col in t.columns:
                 try:
                     result = t.select().where(col.like('%' + chr(0) + '%')).execute()
+                    nulls = result.fetchone()
                 except:
-                    result = None
-                if result and len(result.fetchone()):
+                    nulls = None
+                if nulls and len(nulls):
                     null_list.append('{}.{}.{}'.format(source_schema,t.name,col.name))
                     if remove:
                         # remove them
@@ -536,6 +533,13 @@ def migrate(source_config,target_config,migration_config):
 
     # set up multiprocessing
     if migration_config['multiprocess']:
+
+        # set number of processes
+        if migration_config['processes']:
+            pool = multiprocessing.Pool(int(migration_config['processes']))
+        else: 
+            pool = multiprocessing.Pool()
+
         # starmap takes an iterable list
         arg_iterable = [[schema,source_config,target_config,migration_config] for schema in source_config['schema_list']]
         pool.starmap(_migrate_data,arg_iterable)
@@ -543,8 +547,7 @@ def migrate(source_config,target_config,migration_config):
         for schema in source_config['schema_list']:
             _migrate_data(schema,source_config,target_config,migration_config)
 
-    print('Migration complete!\n')
-
-
-
+    msg = 'Migration complete!\n'
+    logging.info(msg)
+    print(msg)
 
