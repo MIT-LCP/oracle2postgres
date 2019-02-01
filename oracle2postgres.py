@@ -11,9 +11,15 @@ import psycopg2
 import readline # support use of cursors in user input
 import getpass
 
-# Create a log file (record info status and above)
-logfile = "{}_{}".format(datetime.now().strftime("%Y_%m_%d"),'migration.log')
-logging.basicConfig(filename=logfile,level=logging.INFO)
+def create_logfile(fn='migration.log'):
+    """
+    Create a log file (record info status and above)
+
+    Args:
+        fn (str): Name of logfile, appended to the date. Default is 'migration.log'
+    """
+    logfile = "{}_{}".format(datetime.now().strftime("%Y_%m_%d"), fn)
+    logging.basicConfig(filename=logfile,level=logging.INFO)
 
 # Import postgres types
 from sqlalchemy.dialects.postgresql import \
@@ -148,7 +154,10 @@ def check_for_nulls(engine,schema_list,remove=False):
     """
     Check for null characters in strings.
 
-    remove: removes the null characters if found.
+    Args:
+        engine (obj): Database engine.
+        schema_list (list): List of schema to remove.
+        remove (bool): Remove null characters, if found. Default False.
     """
     print('Checking source database for nulls in strings...\n')
     null_list = []
@@ -186,7 +195,10 @@ def check_for_nulls(engine,schema_list,remove=False):
 
 def connect_to_source(config):
     """
-    Connect to source database
+    Connect to source database.
+
+    Args:
+        config (dict): Settings for the source database.
     """
     print_log = False
 
@@ -198,7 +210,11 @@ def connect_to_source(config):
 
 def connect_to_target(config,dbname=None):
     """
-    Connect to target database
+    Connect to target database.
+
+    Args:
+        config (dict): Settings for the target database.
+        dbname (str): Name of target database.
     """
     print_log = False
 
@@ -216,6 +232,9 @@ def connect_to_target(config,dbname=None):
 def _clean_list(schema_list):
     """
     check the list of schema is a valid list
+
+    Args:
+        schema_list (list): List of schema
     """
     try:
         cleaned = [x.strip(' ') for x in schema_list.split(',')]
@@ -226,6 +245,10 @@ def _clean_list(schema_list):
 def check_schema_exist(engine,schema_list):
     """
     Check the schema are present on the source database
+
+    Args:
+        engine (obj): Database engine.
+        schema_list (list): List of schema.
     """
     # get list of all schema
     inspector = sqlalchemy.inspect(engine)
@@ -246,6 +269,12 @@ def check_schema_exist(engine,schema_list):
 def _migrate_data(schema,source_config,target_config,migration_config):
     """
     Migrate the data from the source tables to the target tables
+
+    Args:
+        schema (str): Name of schema to migrate.
+        source_config (dict): Settings for source database.
+        target_config (dict): Settings for target database.
+        migration_config (dict): Settings for the migration.
     """
     # create database connections
     source_engine = connect_to_source(source_config)
@@ -260,16 +289,21 @@ def _migrate_data(schema,source_config,target_config,migration_config):
         _copy_data(source_engine,schema,target_engine,t,migration_config['batchsize'],
             migration_config['logged'],trialrun=migration_config['trialrun'])
 
-def create_target_schema(schema_list,engine,target_engine):
+def create_target_schema(schema_list,source_engine,target_engine):
     """
     Recreate the sources tables on the target database
+
+    Args:
+        schema_list (list): List of schema.
+        source_engine (obj): Database engine.
+        target_engine (obj): Database engine.
     """
     print('Creating schema on target database...\n')
     for source_schema in schema_list:
         
         # load the schema metadata profile
         print(source_schema)
-        source_metadata = sqlalchemy.MetaData(engine,quote_schema=True)
+        source_metadata = sqlalchemy.MetaData(source_engine,quote_schema=True)
         source_metadata.reflect(schema=source_schema)
 
         # create the schema on the target database
@@ -301,7 +335,8 @@ def create_target_schema(schema_list,engine,target_engine):
         # Build the tables on the target database
         source_metadata.create_all(target_engine,checkfirst=False)
 
-    print('Target schema created!\n')
+        msg = "Target schema created: {}".format(source_schema)
+        logging.info(msg)
 
 def drop_connections(dbname,engine):
     """
@@ -320,6 +355,10 @@ def drop_connections(dbname,engine):
 def drop_database(dbname,engine):
     """
     Warning, drops the target database!
+
+    Args:
+        dbname (str): Name of database to drop.
+        engine (obj): Database engine.
     """
 
     msg =  """
@@ -345,6 +384,10 @@ def drop_database(dbname,engine):
 def create_database(dbname,engine):
     """
     Creates a new database on the target.
+
+    Args:
+        dbname (str): Name of database.
+        engine (obj): Database engine.
     """
     con = engine.connect()
     con.execute("COMMIT") # need to close current transaction
@@ -552,4 +595,3 @@ def migrate(source_config,target_config,migration_config):
     msg = 'Migration complete!\n'
     logging.info(msg)
     print(msg)
-

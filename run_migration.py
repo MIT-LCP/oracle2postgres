@@ -25,6 +25,9 @@ def main():
     if input(msg).lower() != "y":
         sys.exit()
 
+    # create the logfile
+    oracle2postgres.create_logfile()
+
     # get settings for migration
     migration_config = oracle2postgres.get_migration_config()
     source_config = oracle2postgres.get_source_config()
