@@ -1,0 +1,11 @@
+cx-Oracle==7.0.0
+DateTime==4.3
+numpy==1.16.1
+pandas==0.24.0
+psycopg2==2.7.7
+python-dateutil==2.7.5
+pytz==2018.9
+readline==6.2.4.1
+six==1.12.0
+SQLAlchemy==1.2.17
+zope.interface==4.6.0
