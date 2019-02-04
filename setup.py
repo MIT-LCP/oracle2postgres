@@ -17,7 +17,7 @@ setup(
     # Versions should comply with PEP440. For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.2',
+    version='0.1.3',
 
     description='Migrate data from an Oracle to Postgres',
     long_description=long_description,
@@ -58,7 +58,6 @@ setup(
         'psycopg2>=2.7.7',
         'python-dateutil>=2.7.5',
         'pytz>=2018.9',
-        'readline>=6.2.4.1',
         'six>=1.12.0',
         'SQLAlchemy>=1.2.17',
         'zope.interface>=4.6.0'
