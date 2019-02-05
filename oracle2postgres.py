@@ -46,7 +46,7 @@ def get_source_config():
         sys.exit("A list of schema is required.")
 
     config['username'] = input('- Username on source database (default "sys"): ') or 'sys'
-    config['host'] = input('- Hostname for source database (default "localhost": ') or 'localhost'
+    config['host'] = input('- Hostname for source database (default "localhost"): ') or 'localhost'
     config['port'] = input('- Port for source database (default "1521"): ') or 1521
     config['database'] = input('- Name of source database (default "sys"): ') or 'sys'
     config['password'] = getpass.getpass('- Password for source database: ')
@@ -159,7 +159,8 @@ def check_for_nulls(engine,schema_list,remove=False):
         schema_list (list): List of schema to remove.
         remove (bool): Remove null characters, if found. Default False.
     """
-    print('Checking source database for nulls in strings...\n')
+    msg = "Checking source database for nulls in strings."
+    logging.info(msg)
     null_list = []
     con = engine.connect()
 
@@ -176,17 +177,21 @@ def check_for_nulls(engine,schema_list,remove=False):
                 except:
                     nulls = None
                 if nulls and len(nulls):
+                    msg = "Null characters found in: {}.{}.{}".format(source_schema,
+                        t.name,col.name)
+                    logging.info(msg)
                     null_list.append('{}.{}.{}'.format(source_schema,t.name,col.name))
                     if remove:
                         # remove them
                         t.update().values({col:sqlalchemy.func.replace(col,chr(0),
                             '')}).where(col.like('%' + chr(0) + '%')).execute()
                         con.execute("COMMIT")
-                        msg = "Null characters removed from {}.{}".format(t.name,col.name)
+                        msg = "Null characters removed from {}.{}.{}".format(source_schema,
+                            t.name,col.name)
                         logging.info(msg)
 
     if null_list and not remove:
-        msg = "Null chars must be removed from the following source columns: {}".format(null_list)
+        msg = "Null chars must be removed from: {}".format(null_list)
         con.close()
         logging.info(msg)
         sys.exit(msg)
@@ -320,7 +325,8 @@ def create_target_schema(schema_list,source_engine,target_engine):
             for col in t.columns:
                 
                 # set the column types
-                newtype = _convert_type(col.name, col.type)
+                newtype = _convert_type(col.name, col.type,
+                    schema_name=source_schema, table_name=t.name)
                 t.c[col.name].type = newtype
                 
                 # check the default values
@@ -530,7 +536,8 @@ def _copy_data(source_engine,source_schema,target_engine,table,
     source_session.close()
     target_session.close()
 
-def _convert_type(colname, ora_type):
+def _convert_type(colname, ora_type, schema_name='',
+    table_name=''):
     """
     Converts oracle type to Postgres type
     """
@@ -542,7 +549,8 @@ def _convert_type(colname, ora_type):
     # Otherwise str(ora_type) clauses will error
     if isinstance(ora_type,sqlalchemy.types.NullType):
         pg_type = sqlalchemy.types.String()
-        logging.info('\t{}: NULL DETECTED'.format(colname))
+        logging.info('\t{}.{}.{}: NULL DETECTED'.format(schema_name, table_name,
+            colname))
         return pg_type
     elif isinstance(ora_type,sqlalchemy.types.Numeric):
         pg_type = sqlalchemy.types.Numeric()
@@ -565,7 +573,8 @@ def _convert_type(colname, ora_type):
         pass
 
     if pg_type != ora_type:
-        msg = "\t{}: {} converted to {}".format(colname,ora_type,pg_type)
+        msg = "\t{}.{}.{}: {} converted to {}".format(schema_name, table_name,
+            colname, ora_type, pg_type)
         logging.info(msg)
 
     return pg_type
