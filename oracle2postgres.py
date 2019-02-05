@@ -267,7 +267,8 @@ def check_schema_exist(engine,schema_list):
         logging.info(msg)
         sys.exit(msg)
     
-    print('\nList of schema to copy: {}\n'.format(schema_list))
+    msg = '\nList of schema to copy: {}\n'.format(schema_list)
+    print(msg)
 
     return schema_list
 
@@ -303,7 +304,8 @@ def create_target_schema(schema_list,source_engine,target_engine):
         source_engine (obj): Database engine.
         target_engine (obj): Database engine.
     """
-    print('Creating schema on target database...\n')
+    msg = 'Creating schema on target database...\n'
+    print(msg)
     for source_schema in schema_list:
         
         # load the schema metadata profile
@@ -616,7 +618,8 @@ def migrate(source_config,target_config,migration_config):
         target_config (dict): Settings for target database.
         migration_config (dict): Settings for the migration.
     """
-    print('Migrating data to target database...\n')
+    msg = 'Migrating data to target database...\n'
+    print(msg)
 
     # set up multiprocessing
     if migration_config['multiprocess']:
@@ -638,9 +641,71 @@ def migrate(source_config,target_config,migration_config):
     logging.info(msg)
     print(msg)
 
-def create_migration_report(source_config,target_config):
+def check_migration(source_engine,target_engine,source_config):
     """
     Carry out post migration integrity checks.
-    """
-    pass
 
+    Args:
+        source_engine (obj): Database engine.
+        target_engine (obj): Database engine.
+        source_config (dict): Settings for source database.
+    """
+    msg = 'Checking migration.\n'
+    print(msg)
+    logging.info(msg)
+    
+    # create dict of metadata, with schema_name as key.
+    source_table_details = {}
+
+    SourceSession = sessionmaker(bind=source_engine)
+    source_session = SourceSession()
+    TargetSession = sessionmaker(bind=target_engine)
+    target_session = TargetSession()
+
+    # iterate the source schema to populate source_details
+    for schema_name in source_config['schema_list']:
+        source_metadata = sqlalchemy.MetaData(source_engine,quote_schema=True)
+        source_metadata.reflect(schema=schema_name)
+        # source_table_details[schema_name] = source_metadata.tables
+
+        target_metadata = sqlalchemy.MetaData(target_engine,quote_schema=True)
+        target_metadata.reflect(schema=schema_name)
+
+        for t in source_metadata.sorted_tables:
+            # compare row count
+            _compare_row_count(source_session,target_session,t,logging)
+
+    # close the sessions
+    source_session.close()
+    target_session.close()
+
+def _compare_row_count(source_session,target_session,t,logging):
+    """
+    Compare row counts for a table on different sources.
+
+    Args:
+        source_session (obj): Database session.
+        target_session (obj): Database session.
+        t (obj): SQLAlchemy table object.
+    """
+    # count the rows
+    try:
+        source_row_ct = source_session.query(t).count()
+        target_row_ct = target_session.query(t).count()
+    except:
+        msg = "{}.{}: Error counting rows.".format(schema_name,t.name)
+        logging.error(msg)
+
+    # compare the rows
+    try:
+        if source_row_ct == target_row_ct:
+            msg = "{}.{}: Source and target row count matches ({} rows)".format(schema_name,
+                    t.name,source_row_ct)
+            logging.info(msg)
+        else:
+            msg = "{}.{}: Source has {} rows. Target has {} rows.".format(schema_name,
+                    t.name,source_row_ct,target_row_ct)
+            logging.warning(msg)
+    except:
+        msg = "{}.{}: Unable to compare row counts.".format(schema_name,t.name)
+        logging.error(msg)
