@@ -673,13 +673,13 @@ def check_migration(source_engine,target_engine,source_config):
 
         for t in source_metadata.sorted_tables:
             # compare row count
-            _compare_row_count(source_session,target_session,t,logging)
+            _compare_row_count(schema_name,source_session,target_session,t,logging)
 
     # close the sessions
     source_session.close()
     target_session.close()
 
-def _compare_row_count(source_session,target_session,t,logging):
+def _compare_row_count(schema_name,source_session,target_session,t,logging):
     """
     Compare row counts for a table on different sources.
 
