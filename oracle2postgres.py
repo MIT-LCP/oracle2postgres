@@ -346,8 +346,12 @@ def create_target_schema(schema_list,source_engine,target_engine):
 
 def drop_connections(dbname,engine):
     """
-    Closes connections to the target database to avoid any interference
+    Closes connections to a database to avoid any interference
     with the migration.
+
+    Args:
+        dbname (str): Name of database.
+        engine (obj): Database engine.
     """
     con = engine.connect()
     con.execute("COMMIT") # need to close current transaction
@@ -360,7 +364,7 @@ def drop_connections(dbname,engine):
 
 def drop_database(dbname,engine):
     """
-    Warning, drops the target database!
+    Warning, drops the specified database!
 
     Args:
         dbname (str): Name of database to drop.
@@ -417,6 +421,11 @@ def _insert_data(target_session,table,data):
     """
     Inserts the data into the target system. Disables integrity checks 
     prior to inserting.
+
+    Args:
+        target_session (obj): SQLAlchemy session.
+        table (obj): SQLAlchemy table object.
+        data (obj): SQLAlchemy data object.
     """
     if data:
         # disable integrity checks
@@ -429,7 +438,10 @@ def _insert_data(target_session,table,data):
 
 def _get_column_string(table):
     """
-    Creates a string of column names for including in a query.
+    Create a string of column names for contructing a query.
+
+    Args:
+        table (obj): SQLAlchemy table object.
     """
     column_list = table.columns.keys()
 
@@ -446,6 +458,15 @@ def _copy_data(source_engine,source_schema,target_engine,table,
     """
     Copies the data into the target system. Disables integrity checks 
     prior to inserting.
+
+    Args:
+        source_engine (obj): Database engine.
+        source_schema (obj): Name of schema to migrate.
+        target_engine (obj): Database engine.
+        table (obj): SQLAlchemy table object.
+        batchsize (int): Number of rows to migrate in each batch.
+        logged (bool): Enable or disable Postgres logging.
+        trialrun (bool): Run in trial mode.
     """
     # create sessions
     SourceSession = sessionmaker(bind=source_engine)
@@ -539,7 +560,13 @@ def _copy_data(source_engine,source_schema,target_engine,table,
 def _convert_type(colname, ora_type, schema_name='',
     table_name=''):
     """
-    Converts oracle type to Postgres type
+    Converts a data type in the source (Oracle) database to a Postgres type.
+
+    Args:
+        colname (str): Name of the column.
+        ora_type (obj): Data type in the source (Oracle) database.
+        schema_name (str): Name of the schema.
+        table_name (str): Name of the table.
     """
     pg_type = ora_type
     
@@ -581,7 +608,13 @@ def _convert_type(colname, ora_type, schema_name='',
 
 def migrate(source_config,target_config,migration_config):
     """
-    Run the migration
+    Migrate data from the source database to the target database. The target
+    database and schema must already exist.
+
+    Args:
+        source_config (dict): Settings for source database.
+        target_config (dict): Settings for target database.
+        migration_config (dict): Settings for the migration.
     """
     print('Migrating data to target database...\n')
 
@@ -604,3 +637,10 @@ def migrate(source_config,target_config,migration_config):
     msg = 'Migration complete!\n'
     logging.info(msg)
     print(msg)
+
+def create_migration_report(source_config,target_config):
+    """
+    Carry out post migration integrity checks.
+    """
+    pass
+
