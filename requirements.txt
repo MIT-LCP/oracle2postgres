@@ -1,6 +1,6 @@
 cx-Oracle==7.0.0
 DateTime==4.3
-numpy==1.16.1
+numpy==1.22.0
 pandas==0.24.0
 psycopg2==2.7.7
 python-dateutil==2.7.5
